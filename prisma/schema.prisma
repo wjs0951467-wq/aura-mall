@@ -1,0 +1,43 @@
+// AURA PostgreSQL 연동 실험용 스키마 (상품 저장·조회만 다룬다).
+// 필드는 types/product.ts의 Product 타입을 그대로 옮겼고, 현재 데이터에 없는 값(재고 등)은 추가하지 않았다.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ScentFamily {
+  Fresh
+  Floral
+  Woody
+  Musk
+}
+
+model Product {
+  /// data/products.ts의 id를 그대로 사용한다 (자동 증가 아님).
+  id            Int         @id
+  slug          String      @unique
+  name          String
+  category      String
+  family        ScentFamily
+  /// 포인트(P) 단위. 원화가 아니다.
+  price         Int
+  volume        String
+  concentration String
+  /// 상품 화면에서 렌더링하는 이미지 경로 (예: /assets/aura-original/white-bottle.png)
+  imageUrl      String      @map("image_url")
+  description   String
+  story         String
+  noteTop       String      @map("note_top")
+  noteHeart     String      @map("note_heart")
+  noteBase      String      @map("note_base")
+  /// 장바구니·홈 쇼케이스의 CSS 배경 키 (white-bottle | pink-bottle | amber-bottle)
+  image         String
+  accent        String
+
+  @@map("products")
+}
