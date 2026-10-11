@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
-import { formatPoint } from "@/data/products"
+import { formatPoint, products as allProducts } from "@/data/products"
 import type { Product } from "@/types/product"
 import { getRelatedProducts, noteStages } from "./catalog"
 import { ProductCard } from "./ProductCard"
@@ -54,11 +54,16 @@ export function ScentNotes({ product }: { product: Product }) {
 export function RelatedProducts({
   product,
   onQuickView,
+  catalog = allProducts,
+  basePath = "/products",
 }: {
   product: Product
   onQuickView: (product: Product, trigger: HTMLButtonElement) => void
+  /** 관련 상품을 고를 전체 상품 목록. 기본값은 기존 Mock 데이터 */
+  catalog?: readonly Product[]
+  basePath?: string
 }) {
-  const { items, sameFamilyCount } = getRelatedProducts(product)
+  const { items, sameFamilyCount } = getRelatedProducts(product, catalog)
   if (!items.length) return null
   // 문구는 실제 선정 기준(같은 계열 우선 → 기본 순서로 보충)과 일치시킨다.
   const body =
@@ -76,14 +81,26 @@ export function RelatedProducts({
       </div>
       <div className="product-grid compact">
         {items.map((item, index) => (
-          <ProductCard index={index} key={item.slug} onQuickView={onQuickView} product={item} />
+          <ProductCard basePath={basePath} index={index} key={item.slug} onQuickView={onQuickView} product={item} />
         ))}
       </div>
     </section>
   )
 }
 
-export function ProductDetail({ product, shopper }: { product: Product; shopper: ProductShopper }) {
+export function ProductDetail({
+  product,
+  shopper,
+  catalog = allProducts,
+  basePath = "/products",
+}: {
+  product: Product
+  shopper: ProductShopper
+  /** 관련 상품 후보 목록. 기본값은 기존 Mock 데이터, DB 실험 화면은 DB 조회 결과를 넘긴다. */
+  catalog?: readonly Product[]
+  /** 컬렉션·상세·로그인 복귀 링크의 기준 경로. 기본값은 /products */
+  basePath?: string
+}) {
   const [quantity, setQuantity] = useState(1)
   const [addedQuantity, setAddedQuantity] = useState<number | null>(null)
   const added = addedQuantity !== null
@@ -92,7 +109,7 @@ export function ProductDetail({ product, shopper }: { product: Product; shopper:
   const { isSignedIn, points, addToCart } = shopper
   const total = product.price * quantity
   const shortage = isSignedIn ? Math.max(0, total - points) : 0
-  const loginHref = `/login?next=${encodeURIComponent(`/products/${product.slug}`)}`
+  const loginHref = `/login?next=${encodeURIComponent(`${basePath}/${product.slug}`)}`
 
   useEffect(() => () => window.clearTimeout(addedTimer.current), [])
 
@@ -107,9 +124,9 @@ export function ProductDetail({ product, shopper }: { product: Product; shopper:
   return (
     <main className="detail-page">
       <nav aria-label="현재 위치" className="breadcrumb page-shell">
-        <Link href="/products">컬렉션</Link>
+        <Link href={basePath}>컬렉션</Link>
         <span aria-hidden="true">/</span>
-        <Link href={`/products?family=${product.family}`}>{product.family}</Link>
+        <Link href={`${basePath}?family=${product.family}`}>{product.family}</Link>
         <span aria-hidden="true">/</span>
         <span aria-current="page">{product.name}</span>
       </nav>
@@ -191,7 +208,7 @@ export function ProductDetail({ product, shopper }: { product: Product; shopper:
       </section>
 
       <ScentNotes product={product} />
-      <RelatedProducts onQuickView={quickView.open} product={product} />
+      <RelatedProducts basePath={basePath} catalog={catalog} onQuickView={quickView.open} product={product} />
 
       <div className="mobile-sticky-cta">
         <div>
@@ -205,7 +222,7 @@ export function ProductDetail({ product, shopper }: { product: Product; shopper:
           {added ? "담았어요" : "장바구니 담기"}
         </button>
       </div>
-      <QuickView onClose={quickView.close} product={quickView.product} />
+      <QuickView basePath={basePath} onClose={quickView.close} product={quickView.product} />
     </main>
   )
 }

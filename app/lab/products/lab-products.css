@@ -31,3 +31,16 @@
   .lab-products-source div { padding: .85rem 1rem; }
   .lab-products-error { padding: 2.5rem 1.25rem; }
 }
+
+/* 향 계열 필터 안내 (상세의 계열 링크 → /lab/products?family=) */
+.lab-products-filter { margin: 0 0 2rem; color: var(--muted); }
+.lab-products-filter strong { color: var(--ink); font-weight: 500; }
+.lab-products-filter a { color: var(--ink); text-decoration: underline; text-underline-offset: .2em; }
+
+/* /lab/products/[slug] 상단 실험 안내 띠. 기존 상세 화면(ProductDetail) 위에만 붙는다. */
+.lab-detail-notice { border-bottom: 1px solid var(--line); background: var(--ivory); font-size: .8rem; color: var(--muted); }
+.lab-detail-notice > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem 1.5rem; padding-block: .7rem; }
+.lab-detail-notice p { margin: 0; overflow-wrap: break-word; }
+.lab-detail-notice strong { color: var(--ink); font-weight: 600; letter-spacing: .08em; }
+.lab-detail-notice code { font-family: inherit; color: var(--ink); }
+.lab-detail-notice a { color: var(--ink); text-decoration: underline; text-underline-offset: .2em; white-space: nowrap; }

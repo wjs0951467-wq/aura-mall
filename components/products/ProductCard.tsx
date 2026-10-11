@@ -9,9 +9,12 @@ export function ProductCard({
   product,
   index = 0,
   onQuickView,
+  basePath = "/products",
 }: {
   product: Product
   index?: number
+  /** 상세 링크의 기준 경로. 기본값은 기존 컬렉션(/products), DB 실험 화면은 /lab/products */
+  basePath?: string
   /** 전달될 때만 미리보기 버튼을 표시한다 (홈 카드는 미사용). */
   onQuickView?: (product: Product, trigger: HTMLButtonElement) => void
 }) {
@@ -21,7 +24,7 @@ export function ProductCard({
         <Link
           aria-label={`${product.name} 상세 보기`}
           className={`product-visual tone-${product.accent}`}
-          href={`/products/${product.slug}`}
+          href={`${basePath}/${product.slug}`}
         >
           <span className="product-index">{String(index + 1).padStart(2, "0")}</span>
           <ProductImage product={product} sizes={productCardImageSizes} />

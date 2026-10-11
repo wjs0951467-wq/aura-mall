@@ -32,7 +32,16 @@ export function useQuickView() {
  * 네이티브 <dialog>의 showModal()을 사용한다.
  * 열린 동안 배경은 inert 처리되어 포커스가 빠지지 않고, Esc는 cancel → close 이벤트로 닫힌다.
  */
-export function QuickView({ product, onClose }: { product: Product | null; onClose: () => void }) {
+export function QuickView({
+  product,
+  onClose,
+  basePath = "/products",
+}: {
+  product: Product | null
+  onClose: () => void
+  /** '상세 보기' 링크의 기준 경로. 기본값은 기존 컬렉션(/products) */
+  basePath?: string
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -81,7 +90,7 @@ export function QuickView({ product, onClose }: { product: Product | null; onClo
               <span>필요 포인트</span>
               <strong>{formatPoint(product.price)}</strong>
             </div>
-            <Link className="cta-link" href={`/products/${product.slug}`} onClick={requestClose}>
+            <Link className="cta-link" href={`${basePath}/${product.slug}`} onClick={requestClose}>
               <span>상세 보기</span>
               <ProductIcon name="arrow" />
             </Link>

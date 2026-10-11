@@ -719,10 +719,21 @@ function QuantityControl({
 }
 
 // 상품 상세 UI는 components/products/ProductDetail. 전역 상태에서 필요한 값만 전달한다.
-export function ProductDetailPage({ product }: { product: Product }) {
+// catalog·basePath는 DB 실험 화면(/lab/products)에서만 넘기며, 생략하면 기존 Mock·/products 동작과 같다.
+export function ProductDetailPage({
+  product,
+  catalog,
+  basePath,
+}: {
+  product: Product
+  catalog?: readonly Product[]
+  basePath?: string
+}) {
   const { addToCart, points, user } = useAppState()
   return (
     <ProductDetail
+      basePath={basePath}
+      catalog={catalog}
       key={product.slug}
       product={product}
       shopper={{ addToCart, points, isSignedIn: Boolean(user) }}
