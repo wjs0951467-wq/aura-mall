@@ -2,9 +2,11 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useMemo, useState } from "react"
-import { products, scentFamilies } from "@/data/products"
+import { products as defaultProducts, scentFamilies } from "@/data/products"
+import type { Product } from "@/types/product"
 import {
   countLabel,
+  familiesOf,
   type FamilyFilter,
   filterProducts,
   parseFamily,
@@ -15,22 +17,32 @@ import { ProductCard } from "./ProductCard"
 import { ProductIcon } from "./ProductIcon"
 import { QuickView, useQuickView } from "./QuickView"
 
-const collectionVolumes = [...new Set(products.map((product) => product.volume))].join(" / ")
-
-/** 컬렉션 상단·검색/필터/정렬·결과 영역. 페이지 <main>과 MY AURA 배너는 AuraSite의 CollectionPage가 감싼다. */
-export function ProductCollection() {
+/**
+ * 컬렉션 상단·검색/필터/정렬·결과 영역. 페이지 <main>과 MY AURA 배너는 AuraSite의 CollectionPage가 감싼다.
+ * products·basePath를 생략하면 기존 /products 동작(Mock 데이터, /products 링크)과 같다.
+ * DB 실험 화면(/lab/products)은 서버에서 조회한 상품 배열과 basePath를 넘기며, 이때 향 계열 탭도 그 배열에서 도출한다.
+ */
+export function ProductCollection({
+  products = defaultProducts,
+  basePath = "/products",
+}: {
+  products?: readonly Product[]
+  basePath?: string
+} = {}) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
+  const families = useMemo(() => (products === defaultProducts ? scentFamilies : familiesOf(products)), [products])
+  const collectionVolumes = useMemo(() => [...new Set(products.map((product) => product.volume))].join(" / "), [products])
   // 향 계열은 URL(?family=)을 단일 기준으로 사용해 링크 이동·뒤로 가기와 항상 일치시킨다.
-  const family: FamilyFilter = parseFamily(params.get("family")) ?? "All"
+  const family: FamilyFilter = parseFamily(params.get("family"), families) ?? "All"
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortKey>("default")
   const quickView = useQuickView()
 
   const filtered = useMemo(
     () => filterProducts(products, { query, family, sort }),
-    [family, query, sort],
+    [family, products, query, sort],
   )
 
   const setFamily = (next: FamilyFilter) => {
@@ -81,7 +93,7 @@ export function ProductCollection() {
         </label>
         <div className="filter-row">
           <div aria-label="향 계열 필터" className="filter-tabs" role="group">
-            {(["All", ...scentFamilies] as const).map((item) => (
+            {(["All", ...families] as const).map((item) => (
               <button
                 aria-pressed={family === item}
                 className={family === item ? "is-active" : ""}
@@ -138,7 +150,7 @@ export function ProductCollection() {
         {filtered.length ? (
           <div className="product-grid">
             {filtered.map((product, index) => (
-              <ProductCard index={index} key={product.slug} onQuickView={quickView.open} product={product} />
+              <ProductCard basePath={basePath} index={index} key={product.slug} onQuickView={quickView.open} product={product} />
             ))}
           </div>
         ) : (
@@ -157,7 +169,7 @@ export function ProductCollection() {
           </div>
         )}
       </section>
-      <QuickView onClose={quickView.close} product={quickView.product} />
+      <QuickView basePath={basePath} onClose={quickView.close} product={quickView.product} />
     </>
   )
 }

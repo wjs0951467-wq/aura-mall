@@ -1,6 +1,6 @@
 /* /lab/products 실험 화면 전용 스타일. 중단점은 기존 상품 그리드와 같은 900px / 560px를 사용한다. */
 .lab-products { padding-block: 3.5rem 6rem; }
-.lab-products-header h1 { margin: .5rem 0 1rem; font-family: var(--font-serif); font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 400; }
+.lab-products-header .lab-products-title, .lab-products-header h1 { margin: .5rem 0 1rem; font-family: var(--font-serif); font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 400; }
 .lab-products-header p:not(.eyebrow) { margin: .3rem 0; color: var(--muted); overflow-wrap: break-word; }
 .lab-products-warning { display: inline-block; max-width: 100%; margin-top: .8rem !important; padding: .4rem .8rem; border: 1px solid currentColor; font-size: .85rem; }
 
@@ -32,10 +32,8 @@
   .lab-products-error { padding: 2.5rem 1.25rem; }
 }
 
-/* 향 계열 필터 안내 (상세의 계열 링크 → /lab/products?family=) */
-.lab-products-filter { margin: 0 0 2rem; color: var(--muted); }
-.lab-products-filter strong { color: var(--ink); font-weight: 500; }
-.lab-products-filter a { color: var(--ink); text-decoration: underline; text-underline-offset: .2em; }
+/* 실험 목록 안의 기존 컬렉션 영역: DB 정보 패널 바로 아래에 오므로 상단 여백만 줄인다. (기존 /products에는 영향 없음) */
+.lab-products .collection-hero { padding-top: 1.5rem; }
 
 /* /lab/products/[slug] 상단 실험 안내 띠. 기존 상세 화면(ProductDetail) 위에만 붙는다. */
 .lab-detail-notice { border-bottom: 1px solid var(--line); background: var(--ivory); font-size: .8rem; color: var(--muted); }

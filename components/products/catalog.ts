@@ -24,12 +24,15 @@ export const noteStages = [
   { key: "base", label: "BASE", copy: "피부 가까이에 오래 남는 고요한 잔향" },
 ] as const
 
-/** URL의 family 값을 대소문자 구분 없이 해석한다. 알 수 없는 값은 null. */
-export function parseFamily(value: string | null): ScentFamily | null {
+/** URL의 family 값을 대소문자 구분 없이 해석한다. 알 수 없는 값은 null. families를 생략하면 기본 향 계열 목록을 기준으로 한다. */
+export function parseFamily(value: string | null, families: readonly ScentFamily[] = scentFamilies): ScentFamily | null {
   if (!value) return null
   const normalized = value.trim().toLowerCase()
-  return scentFamilies.find((family) => family.toLowerCase() === normalized) ?? null
+  return families.find((family) => family.toLowerCase() === normalized) ?? null
 }
+
+/** 상품 목록에 실제로 있는 향 계열을 처음 등장한 순서대로 뽑는다. (외부에서 받은 상품 배열용) */
+export const familiesOf = (list: readonly Product[]): ScentFamily[] => [...new Set(list.map((product) => product.family))]
 
 const searchText = (product: Product) =>
   [

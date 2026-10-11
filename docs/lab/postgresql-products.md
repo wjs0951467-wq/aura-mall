@@ -7,9 +7,10 @@
 
 - 브랜치: `feature/yejin-db`
   - 1단계(저장·목록 조회): 기준 커밋 `f568aea` → `98cb51e`
-  - 2단계(DB 기반 상세·관련 상품): 기준 커밋 `98cb51e`
-- 범위: 상품 6종 저장, 목록·상세 조회만. 회원·장바구니·포인트·교환 DB는 포함하지 않음
-- DB 스키마: 2단계에서 변경 없음 (`slug`에 이미 unique 인덱스가 있어 단건 조회에 그대로 사용)
+  - 2단계(DB 기반 상세·관련 상품): 기준 커밋 `98cb51e` → `155d795`
+  - 3단계(DB 목록에 기존 탐색 기능 연결): 기준 커밋 `155d795`
+- 범위: 상품 6종 저장, 목록·상세 조회와 목록 탐색만. 회원·장바구니·포인트·교환 DB는 포함하지 않음
+- DB 스키마: 2·3단계에서 변경 없음 (`slug`에 이미 unique 인덱스가 있어 단건 조회에 그대로 사용)
 - 환경: Windows · Node.js v24.19.0 · npm 11.17.0 · PostgreSQL 18.4 · Next.js 16.4.0
 - 사용 도구: Prisma ORM **7.10.0** (`prisma`, `@prisma/client`, `@prisma/adapter-pg` 버전 고정)
   - npm의 `prisma@latest` 태그는 8.0.0-rc(릴리스 후보)를 가리키므로 안정 버전 7.10.0을 직접 지정했습니다.
@@ -25,14 +26,15 @@ PostgreSQL  aura_mall_lab.public.products  (prisma/migrations로 생성)
    │  서버에서만 실행: lib/db/products.ts → lib/db/prisma.ts (server-only)
    ▼
    │  DB 행 → Product 타입 변환 (lib/db/productMapping.ts)
-   ├─▶ /lab/products          getProductsFromDb({ family? })
-   │      기존 ProductCard (basePath="/lab/products") + 조회 정보(current_database, 행 수, 조회 시각)
-   │      상품 클릭 ↓
+   ├─▶ /lab/products          getProductsFromDb()  ← 항상 전체 6종 (3단계부터 서버에서 계열로 거르지 않음)
+   │      조회 정보 패널 + 기존 ProductCollection (products = DB 전체, basePath="/lab/products")
+   │        └ 브라우저에서: 검색·향 계열 필터(?family=)·포인트 정렬·빈 결과·조건 초기화·Quick View
+   │      상품 클릭 / Quick View '상세 보기' ↓
    └─▶ /lab/products/[slug]   getProductBySlugFromDb(slug) + getProductsFromDb()
           기존 ProductDetail (catalog = DB 전체 상품, basePath="/lab/products")
             ├ 상세 정보·노트·이미지·필요 포인트 = DB 상품
             ├ 관련 상품 = 기존 getRelatedProducts(DB 상품, DB 목록) → 실험 상세 링크
-            ├ 브레드크럼 → /lab/products, /lab/products?family=계열 (DB에서 계열 필터)
+            ├ 브레드크럼 → /lab/products, /lab/products?family=계열 (목록이 브라우저에서 계열 필터)
             └ 로그인 안내 → /login?next=/lab/products/[slug]
 ```
 
@@ -57,7 +59,7 @@ PostgreSQL  aura_mall_lab.public.products  (prisma/migrations로 생성)
 | `lib/db/productMapping.ts` | `Product` ↔ DB 행 변환 |
 | `lib/db/prisma.ts` | 서버 전용 Prisma 클라이언트 (`import "server-only"`) |
 | `lib/db/products.ts` | 서버 전용 조회 함수: 목록(`getProductsFromDb`, 계열 필터 선택), slug 단건(`getProductBySlugFromDb`, 2단계 추가). 실패 시 Mock으로 대체하지 않고 오류를 던짐 |
-| `app/lab/products/page.tsx`, `lab-products.css` | 실험 목록. 성공·빈 테이블·오류 상태, `?family=` 필터, 상품 링크는 실험 상세로 |
+| `app/lab/products/page.tsx`, `lab-products.css` | 실험 목록. DB 전체 상품을 조회해 기존 `ProductCollection`에 전달(3단계). 빈 테이블·오류 상태는 실험 화면이 직접 표시 |
 | `app/lab/products/[slug]/page.tsx` | (2단계) DB 기반 상세. 기존 상세 UI 재사용, 상품별 metadata, 404·DB 오류 구분 |
 | `app/lab/products/labAccess.ts` | (2단계) 목록·상세 공통: 요청 시점 렌더링 + 운영 접근 제한(`ENABLE_DB_LAB`), DB 오류 분류 |
 | `app/lab/products/LabDbErrorPanel.tsx`, `LabSourceInfo.tsx`, `labRoutes.ts` | (2단계) 오류 화면·조회 정보 표시를 목록·상세가 공유하도록 분리, 실험 경로 상수 |
@@ -156,7 +158,7 @@ $env:ENABLE_DB_LAB = "true"; npm run start
 | 목록·상세 값 일치 | 6/6 이름·포인트(목록·상세)·노트 3종·이미지 경로가 기존 데이터와 일치 |
 | 상품별 metadata | 6/6 `<상품명> — AURA LAB` (DB 상품명), `noindex` |
 | 관련 상품 | 6/6 3개, 자신 제외, 중복 없음, 모두 `/lab/products/...` 링크. 클릭 시 실험 상세로 이동, Quick View '상세 보기'도 실험 경로 |
-| 브레드크럼 계열 링크 | `/lab/products?family=Woody` → DB에서 Woody 3개만 조회 |
+| 브레드크럼 계열 링크 | `/lab/products?family=Woody` → Woody 3개만 표시 (2단계: 서버 필터 → 3단계: 브라우저 필터로 변경, 결과 동일) |
 | 수량 1→2→3 필요 포인트 | Bergamot Veil 38,000P → 76,000P → 114,000P |
 | 로그인 복귀 | 로그인 안내 링크 `?next=%2Flab%2Fproducts%2Fbergamot-veil` → 로그인 후 실험 상세로 복귀. 보유 10,000P(Dew 가입 보너스) · 부족 28,000P 표시 |
 | 장바구니 담기 | 기존 브라우저 장바구니(localStorage)에 저장됨 (DB 아님) |
@@ -172,9 +174,61 @@ $env:ENABLE_DB_LAB = "true"; npm run start
 
 알려진 제약:
 - DB 장애 화면의 HTTP 상태 코드는 200입니다. App Router 페이지는 렌더링 중 응답 코드를 503 등으로 지정할 수 없어, 화면 내용(오류 코드·제목)으로 구분합니다.
-- 실험 목록에는 기존 컬렉션의 검색·정렬·Quick View UI가 없습니다(상세의 관련 상품에는 Quick View 있음).
+- ~~실험 목록에는 기존 컬렉션의 검색·정렬·Quick View UI가 없습니다.~~ → 3단계에서 해결
 
 미실행: 실제 사용자 브라우저(Chrome 외)·실기기 확인, 장바구니 → 교환까지의 흐름(이번 범위 밖), 자동화 테스트의 프로젝트 내 정식 도입(프로젝트에 테스트 도구 없음).
+
+## 3단계: DB 목록에 기존 탐색 기능 연결 (2026-10-11)
+
+### 역할 구분
+
+| 위치 | 하는 일 |
+| --- | --- |
+| 서버 (`app/lab/products/page.tsx`) | 실험 접근 제한 확인 → DB에서 **전체 상품**을 요청마다 조회 → 조회 정보 패널 렌더링 → 상품 배열을 `ProductCollection`에 전달. DB 장애 시 오류 화면(Mock 대체 없음) |
+| 브라우저 (`ProductCollection`) | 전달받은 배열만으로 검색·향 계열 필터·포인트 정렬·결과 수·빈 결과·조건 칩·조건 초기화·Quick View 처리. 향 계열은 URL `?family=`와 동기화 |
+
+- 서버가 `?family=`로 거르지 않는 이유: 서버가 Woody 3개만 넘기면 브라우저에서 '전체'를 눌러도 3개만 남는 문제가 생깁니다. 항상 6종을 넘기고 필터는 브라우저 한 곳에서만 처리합니다.
+- 상품이 6종뿐이라 전체 조회 후 브라우저 처리로 충분합니다. 상품이 많아지면 서버 검색·페이지네이션을 검토해야 합니다.
+
+### 공유 컴포넌트 변경
+
+| 파일 | 변경 | 기본값 (기존 /products 동작) |
+| --- | --- | --- |
+| `components/products/ProductCollection.tsx` | 선택 props `products`(탐색 대상 배열), `basePath`(카드·Quick View 링크 기준). 향 계열 탭과 상단 용량 문구를 전달받은 배열에서 계산 | Mock `products`, 기본 향 계열 목록, `"/products"` |
+| `components/products/catalog.ts` | `parseFamily(value, families?)`에 허용 계열 목록 인자 추가, `familiesOf(products)` 추가(배열에 있는 계열을 처음 등장 순서로) | `families` 생략 시 기존과 같이 기본 향 계열 목록 |
+
+- 검색·정렬 로직(`filterProducts`), 카드(`ProductCard`), Quick View는 그대로 재사용했고 복제하지 않았습니다.
+- 실험 화면에서는 상품 목록·결과 수·향 계열 탭·`?family=` 해석·Quick View가 모두 서버가 넘긴 DB 배열에서 나옵니다. Mock 배열과 Mock 계열 목록은 기본값 경로(`/products`)에서만 쓰입니다.
+- 기존 `AuraSite`의 `CollectionPage`는 `<ProductCollection />`을 props 없이 호출하므로 변경하지 않았습니다.
+- 실험 전용 스타일: 실험 헤더 제목을 `h2`로 바꾸고(페이지 `h1`은 기존 컬렉션 영역의 "Find Your Scent Veil."), DB 정보 패널 바로 아래의 컬렉션 상단 여백만 `.lab-products .collection-hero`로 줄였습니다. `globals.css`는 변경하지 않았습니다.
+
+### 검증 결과
+
+브라우저 자동 점검(Playwright + 설치된 Chrome, 임시 폴더) **59/59 통과**, 2단계 점검 재실행 **29/29 통과**.
+
+| 항목 | 결과 |
+| --- | --- |
+| `/products`와 동일 동작 (같은 조작을 두 화면에서 실행해 결과 비교) | 12/12 일치: 한글 '우디'·'플로럴', 영문 'musk', 대문자 'BERGAMOT', 공백 '  fig   leaf  ', 복수 단어 'woody amber', 낮은 순, 높은 순, Woody+낮은 순, Woody+'amber'+높은 순, 빈 결과 2종 |
+| 초기 상태 | DB 6종, 기본순(id 순), 탭 전체/Fresh/Floral/Woody/Musk(DB 상품에서 도출), "여섯 가지", DB 정보 패널 유지 |
+| 정렬 | 낮은 순 38,000→52,000P, 높은 순 52,000→38,000P, 기본순 복귀 |
+| 필터 ↔ URL | Woody 클릭 → `?family=Woody` 3종 / 전체 → URL 정리, 6종 복귀 / 직접 URL `?family=Woody` 진입 후 전체 → 6종(서버 필터 중복 없음) / `?family=floral` → Floral / `?family=citrus` → 전체 6종 |
+| 뒤로/앞으로 | `?family=Woody` 목록 → 상세 → 뒤로: Woody 3종 복원 → 앞으로: 실험 상세 |
+| 조건 칩·초기화 | Woody+'fig'+높은 순에서 칩 3개+조건 초기화 표시, 검색어·정렬·계열 칩 개별 삭제 각각 정상, '조건 초기화'와 빈 결과의 '전체 향 보기' → 6종·검색/정렬/URL 초기화 |
+| 빈 결과 | Floral+'cedar' → "조건에 맞는 향을 찾지 못했어요." + 조건 문구 |
+| Quick View | 6/6 이름·포인트·설명·노트·이미지가 DB 값과 일치, '상세 보기' 링크 `/lab/products/[slug]`. Esc·닫기 버튼·배경 클릭으로 닫힘, 세 경우 모두 미리보기 버튼으로 포커스 복귀. '상세 보기' 클릭 → 실험 상세(이름 일치) |
+| 실험 상세 이동 | 필터된 목록의 카드, Quick View, 상세 브레드크럼 계열 링크 모두 실험 경로 |
+| 화면 | 375/768/1440px 실험 목록·Quick View·기존 목록 모두 가로 넘침 없음 |
+| 기존 `/products` 회귀 | 6종·탭·카드/Quick View 링크 `/products`, 필터 URL `/products?family=Musk`, 실험 패널 없음. 2단계 점검(상세·관련 상품·로그인 복귀 경로) 재실행 통과 |
+| 운영 모드 | `ENABLE_DB_LAB` 없음 → 404 / `true` → 200, 서버 HTML에 카드 6개(`?family=Woody`는 3개·Woody 탭 선택) / DB 장애(가짜 URL) → `DB ERROR · ECONNREFUSED`, 카드 0개 |
+| `db:verify` · lint · build | 통과 · 오류 0/기존 경고 5 · 성공(`/lab/products` ƒ, `/products` ○, 기존 상세 ● 유지) |
+| 브라우저 번들 검사 | `.next/static`에 DB 관련 문자열 없음 |
+
+참고 (기존 동작, 이번 변경과 무관):
+- 768px Quick View에서 BASE 노트 'Cedarwood'가 'Cedarwo/od'로 줄바꿈됩니다. 기존 `/products`에서도 같은 높이로 재현되어 공통 디자인 영역으로 판단해 수정하지 않았습니다.
+- 기존 `/products`는 정적 페이지에서 `useSearchParams`를 써서 서버 HTML에는 상품 카드가 없고 브라우저에서 그려집니다. 실험 목록은 요청 시 렌더링이라 서버 HTML에 카드가 포함됩니다.
+- 향 계열 필터는 기존과 같이 `router.replace`를 써서 필터 변경 자체는 방문 기록에 쌓이지 않습니다. 뒤로/앞으로는 상세 이동 전후의 URL 상태를 복원합니다.
+
+미실행: Chrome 외 브라우저·실기기, 스크린리더 실사용 점검, 상품이 많을 때의 성능.
 
 ## npm audit (2026-10-11, `audit fix --force` 미실행)
 
@@ -189,8 +243,9 @@ $env:ENABLE_DB_LAB = "true"; npm run start
 
 ## 기존 서비스에 통합하려면 (다음 단계 제안)
 
-1. 상품 목록: `ProductCollection`(현재 클라이언트에서 Mock을 직접 import)이 서버에서 조회한 상품 배열을 props로 받도록 바꾸기
-   (검색·정렬·필터 로직 `filterProducts`는 배열만 받으므로 그대로 재사용 가능)
+1. 상품 목록: 3단계에서 `ProductCollection`이 상품 배열을 받을 수 있게 되었으므로, `/products` 서버 페이지에서 DB를 조회해 넘기면 됩니다.
+   이때 `/products`가 정적 페이지에서 요청 시 렌더링(또는 캐시·재검증)으로 바뀌는 점과 DB 장애 화면 정책을 함께 결정해야 합니다.
+   상품 수가 늘면 서버 검색·페이지네이션 검토
 2. 상품 상세: 2단계의 `catalog`·`basePath` 주입 구조를 `/products/[id]`에 적용. `generateStaticParams`·`generateMetadata`의
    데이터 출처와 렌더링 방식(빌드 시 생성 vs 요청 시 조회, 캐시·재검증) 결정
 3. 홈 쇼케이스·장바구니·Quick View 등 `products` 배열을 직접 쓰는 곳 정리 (장바구니 저장 데이터 호환 포함)
